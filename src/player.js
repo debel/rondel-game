@@ -1,4 +1,6 @@
-import tileTypes, { emptyTile } from './tileTypes';
+import baseTiles, { emptyTile } from './tiles';
+
+emptyTile.icon = '🍵 + 1';
 
 const generateRandomSequence = (n = 8) => {
   const allValues = Array.from(new Array(n), (_, i) => i);
@@ -14,22 +16,35 @@ const generateRandomSequence = (n = 8) => {
 };
 
 const randomizeBoard = () => {
-  const sequence = generateRandomSequence(tileTypes.length);
-  const board = sequence.map((i, j) => ({ ...tileTypes[i], position: j }));
+  const sequence = generateRandomSequence(baseTiles.length);
+  const board = sequence.map((i, j) => ({ ...baseTiles[i], position: j }));
   board.x = emptyTile;
   return board;
 };
 
-const createPlayer = (name, ) => {
+const playerHasFoodForOrder = (playerFoods, order) => Object.entries(order.foods)
+.map(([foodType, amount]) => playerFoods[foodType] >= amount)
+.every(hasFoodType => hasFoodType === true);
+
+const createPlayer = (name, ordersLine, tileMarket) => {
   const board = randomizeBoard();
-  const modifiers = {};
+  const modifiers = {
+    gainFood(foodType, amount) {
+      if (foodType === 'tea') {
+        this.gainFood('tea', 1, false);
+      }
+    }
+  };
   const foods = { sushi: 0, noodles: 0, tea: 0 };
   let position = 0;
   let money = 0;
   let points = 0;
   let initiateSelectFood = () => Promise.resolve();
   let initiateSelectOrder = () => Promise.resolve();
-  let isSelectingFood = false;
+  let initiateSelectTile = () => Promise.resolve();
+  let initiateTilePlacement = () => Promise.resolve();
+  let notifyOnMove = () => {};
+  let isSelecting = null;
 
   return {
     allowSelectFood(newSetter) {
@@ -38,24 +53,32 @@ const createPlayer = (name, ) => {
     allowSelectOrder(newSetter) {
       initiateSelectOrder = newSetter;
     },
+    allowSelectTile(newSetter) {
+      initiateSelectTile = newSetter;
+    },
+    allowPlaceTile(newSetter) {
+      initiateTilePlacement = newSetter;
+    },
     gainMoney(amount) {
       money += amount;
     },
-    loseMoney(amount) {
+    async loseMoney(amount) {
       if (money < amount) {
         throw new Error('Not enough money');
       }
 
       money -= amount;
     },
-
     gainPoints(amount) {
       points += amount;
     },
-
-    gainFood(type, amount) {
+    gainFood(type, amount, callModifiers = true) {
       if (!foods[type]) {
         foods[type] = 0;
+      }
+
+      if (callModifiers && modifiers['gainFood']) {
+        modifiers.gainFood.call(this, type, amount);
       }
 
       foods[type] += amount;
@@ -67,14 +90,18 @@ const createPlayer = (name, ) => {
 
       foods[type] -= amount;
     },
-    selectFood() {
-      const allFood = Object.entries(foods).reduce((result, [_, amount]) => result + amount, 0);
-      if (allFood === 0) { throw new Error('Not enough food'); }
+    selectFood(checkIfHas = true) {
+      if (isSelecting) {
+        throw new Error(`already selecting ${isSelecting}`);
+      }
 
-      isSelectingFood = true;
+      const allFood = Object.entries(foods).reduce((result, [_, amount]) => result + amount, 0);
+      if (checkIfHas && allFood === 0) { throw new Error('Not enough food'); }
+
+      isSelecting = 'food';
       return initiateSelectFood()
         .finally(() => {
-          isSelectingFood = false;
+          isSelecting = null;
         });
     },
     currentMoney() {
@@ -92,8 +119,11 @@ const createPlayer = (name, ) => {
     getPosition() {
       return position;
     },
+    onMove(cb) {
+      notifyOnMove = cb;
+    },
     move(target) {
-      if (isSelectingFood) throw new Error('select food first');
+      if (isSelecting) throw new Error(`select ${isSelecting} first`);
 
       const validForSmall = position < 6 && (position < target && target - position <= 2);
       const validForSix = position === 6 && (target === 7 || target === 0);
@@ -101,28 +131,59 @@ const createPlayer = (name, ) => {
       
       if (validForSmall || validForSix || validForSeven) {
         position = target;
-        return board[target].activate(this);
+        return Promise.resolve()
+          .then(() => board[target].activate(this))
+          .finally(notifyOnMove);
       }
 
       throw new Error('Illigal move');
     },
-    async fulfilOrder() {
-      return initiateSelectOrder().then((selectedOrder) => {
-        const foodItems = Object.entries(selectedOrder.foods);
-        const hasAllRequiredFood = foodItems
-          .map(([foodType, amount]) => foods[foodType] >= amount)
-          .every(hasFoodType => hasFoodType === true);
+    async selectOrder(allOrders) {
+      if (isSelecting) { throw new Error(`already selecting ${isSelecting}`)};
 
-        if (!hasAllRequiredFood) {
-          throw new Error('Cannot fulfil order');
-        }
+      const hasValidOptions = ordersLine.currentOrders()
+        .map(order => playerHasFoodForOrder(foods, order))
+        .some(canFulfil => canFulfil === true);
+      
+      if (!hasValidOptions) { throw new Error('Cannot fulfil any orders right now'); }
 
-        foodItems.forEach(([type, amount]) => {
-          this.loseFood(type, amount);
-        });
+      return initiateSelectOrder();
+    },
+    async fulfilOrder(selectedOrder) {
+      const foodItems = Object.entries(selectedOrder.foods);
+      
+      if (!playerHasFoodForOrder(foods, selectedOrder)) {
+        throw new Error('Cannot fulfil order');
+      }
 
-        this.gainPoints(selectedOrder.points);
+      foodItems.forEach(([type, amount]) => {
+        this.loseFood(type, amount);
       });
+
+      ordersLine.discardOrder(selectedOrder.id);
+      this.gainPoints(selectedOrder.points);
+      this.gainMoney(selectedOrder.money);
+    },
+    async selectTile() {
+      if (isSelecting) { throw new Error(`already selecting ${isSelecting}`)};
+
+      const canBuyATile = tileMarket
+        .map(tile => money >= tile.cost)
+        .some(canBuy => canBuy === true);
+
+      if (!canBuyATile) {
+        throw new Error('cannot afford any tiles');
+      }
+  
+      isSelecting = true;
+      return initiateSelectTile();
+    },
+    async placeTile(selectedTile) {
+      return this.loseMoney(selectedTile.cost)
+        .then(initiateTilePlacement)
+        .then((selectedPosition) => {
+          board[selectedPosition] = { ...selectedTile, position: selectedPosition };  
+        }).finally(() => { isSelecting = false; });
     },
   };
 };
