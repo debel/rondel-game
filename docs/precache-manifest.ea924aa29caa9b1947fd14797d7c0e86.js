@@ -1,11 +1,11 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "0349aec4c41d6478ca38cf6f584adcda",
+    "revision": "104a9c8893abe8d83c78097ebd6ee800",
     "url": "/rondel-game/index.html"
   },
   {
-    "revision": "3ae759708fd126d403fe",
-    "url": "/rondel-game/static/css/main.aaede7b5.chunk.css"
+    "revision": "746a58706c17d6f3f124",
+    "url": "/rondel-game/static/css/main.9cd38b89.chunk.css"
   },
   {
     "revision": "de6fe229ea4b40bb35c9",
@@ -16,8 +16,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/rondel-game/static/js/2.8239c594.chunk.js.LICENSE"
   },
   {
-    "revision": "3ae759708fd126d403fe",
-    "url": "/rondel-game/static/js/main.877799c2.chunk.js"
+    "revision": "746a58706c17d6f3f124",
+    "url": "/rondel-game/static/js/main.661904d8.chunk.js"
   },
   {
     "revision": "ef17ff1d815ff42d13e7",

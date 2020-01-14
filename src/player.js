@@ -144,6 +144,22 @@ const createPlayer = (name, ordersLine, tileMarket) => {
       this.gainMoney(selectedOrder.money);
       isSelecting = null;
     },
+    async selectPosition() {
+      return initiateSelect(SELECTING_OPTIONS.position).then(position => {
+        if (position === 'x') { throw new Error('cannot select the centeral square'); }
+        return position;
+      });
+    },
+    async swapTiles(position1, position2) {
+      const t1 = board[position1];
+      const t2 = board[position2];
+
+      t1.position = position2;
+      t2.position = position1;
+
+      board[position1] = t2;
+      board[position2] = t1;
+    },
     async selectTile() {
       return initiateSelect(SELECTING_OPTIONS.tile);
     },

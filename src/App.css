@@ -19,14 +19,15 @@ body {
 .float-right {
   width: auto;
   float: right;
+  max-width: 50%;
 }
 
-.player-board {
+.tiles-market, .player-board {
   font-size: 1.5em;
   border: 1px solid black;
 }
 
-.player-board td {
+.tiles-market td,.player-board td {
   width: 80px;
   height: 80px;
   border: 1px solid black;
@@ -62,6 +63,7 @@ td:hover .tooltip{
 
 .float-left {
   float: left;
+  max-width: 50%;
 }
 
 .action-options {

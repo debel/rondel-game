@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/rondel-game/precache-manifest.5d6618cbb9db62a8f7aa1384a13e6a63.js"
+  "/rondel-game/precache-manifest.ea924aa29caa9b1947fd14797d7c0e86.js"
 );
 
 self.addEventListener('message', (event) => {

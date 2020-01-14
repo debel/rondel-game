@@ -4,6 +4,16 @@ const gainFood = foodType => (player, numberOfMeeples = 1) => {
   return Promise.resolve(player.gainFood(foodType, numberOfMeeples));
 };
 
+const multipleChoice = async (tile, player, options) => { 
+  return player.selectAction(options.map(option => ({
+    ...option, action() { return option.action().catch(error => {
+        alert(error);
+        return tile.activate(player);
+      });}
+    })
+  ));
+}
+
 const gainSelectedFoodExcept = (forbiddenFood, tile, player, numberOfMeeples = 1) => {
   return player.selectFood(false)
     .then(({ foodType, amount }) => {
@@ -36,7 +46,7 @@ export const fancyTiles = [
     title: 'Tea or Noodles',
     description: 'make either tea or noodles',
     type: 1,
-    cost: 2,
+    cost: 3,
     activate(player, numberOfMeeples = 1) {
       return gainSelectedFoodExcept('sushi', this, player, numberOfMeeples);
     },
@@ -46,7 +56,7 @@ export const fancyTiles = [
     title: 'Tea or Sushi',
     description: 'make either tea or sushi',
     type: 1,
-    cost: 2,
+    cost: 3,
     activate(player, numberOfMeeples = 1) {
       return gainSelectedFoodExcept('noodles', this, player, numberOfMeeples);
     },
@@ -56,43 +66,85 @@ export const fancyTiles = [
     title: 'Sushi or Noodles',
     description: 'make either sushi or noodles',
     type: 1,
-    cost: 2,
+    cost: 3,
     activate(player, numberOfMeeples = 1) {
       return gainSelectedFoodExcept('tea', this, player, numberOfMeeples);
-    },
-  },
-  {
-    icon: '🥡 / 🍽️',
-    title: 'Sell or Dine',
-    description: 'discard food for money or fulfil an order',
-    type: 1,
-    cost: 4,
-    activate(player, numberOfMeeples = 1) {
-      const thisTile = this;
-      return player.selectAction([
-        { icon: '🍽️', action() { return baseTiles[6].activate(player).catch(error => {
-          alert(error);
-          return thisTile.activate(player);
-        }); }},
-        { icon: '🥡', action() { return baseTiles[3].activate(player).catch(error => {
-          alert(error);
-          return thisTile.activate(player);
-        }); }},
-      ]);
     },
   },
   {
     icon: '🥡🥡',
     title: 'Sell 2 food',
     description: 'sell 2 food',
-    type: 1,
-    cost: 3,
+    type: 2,
+    cost: 4,
     activate(player, numberOfMeeples = 1) {
       return sellAFood(player, numberOfMeeples)
         .then(() => sellAFood(player, numberOfMeeples))
         .catch((error) => {
           return this.activate(player);
         });
+    },
+  },
+  {
+    icon: '🛠️ / 👩‍🍳',
+    title: '',
+    description: '',
+    type: 2,
+    cost: 5,
+    activate(player, numberOfMeeples = 1) {
+      return multipleChoice(this, player, [
+        { icon: '🛠️', action() { return baseTiles[5].activate(player) } },
+        { icon: '👩‍🍳', action() { return baseTiles[4].activate(player) } },
+      ]);
+    },
+  },
+  {
+    icon: '🛠️🧩',
+    title: '',
+    description: '',
+    type: 3,
+    cost: 6,
+    activate(player, numberOfMeeples = 1) {
+      return baseTiles[5].activate(player)
+        .catch((error) => { alert(error); })
+        .then(() => baseTiles[7].activate(player))
+    },
+  },
+  {
+    icon: '🥡🛠️',
+    title: '',
+    description: '',
+    type: 3,
+    cost: 6,
+    activate(player, numberOfMeeples = 1) {
+      return baseTiles[3].activate(player)
+        .catch((error) => { alert(error); })
+        .then(() => baseTiles[5].activate(player))
+    },
+  },
+  {
+    icon: '🥡 / 🍽️',
+    title: 'Sell or Dine',
+    description: 'discard food for money or fulfil an order',
+    type: 3,
+    cost: 7,
+    activate(player, numberOfMeeples = 1) {
+      return multipleChoice(this, player, [
+        { icon: '🍽️', action() { return baseTiles[6].activate(player) } },
+        { icon: '🥡', action() { return baseTiles[3].activate(player) } },
+      ]);
+    },
+  },
+  {
+    icon: '🍣🍜🍵',
+    title: '',
+    description: '',
+    type: 3,
+    cost: 9,
+    async activate(player, numberOfMeeples = 1) {
+      gainFood('sushi')(player);
+      gainFood('noodles')(player);
+      gainFood('tea')(player);
     },
   },
 ];
@@ -147,7 +199,10 @@ const baseTiles = [
     description: 'Hire a worker (new meeple)',
     type: 0,
     cost: 0,
-    async activate(player, numberOfMeeples) { },
+    async activate(player, numberOfMeeples) {
+      alert('hire');
+      return true;
+    },
   },
   {
     icon: '🛠️',
@@ -202,7 +257,10 @@ const baseTiles = [
     text: 'Rearrange tiles on your board',
     type: 0,
     cost: 0,
-    activate(player, numberOfMeeples) {
+    async activate(player, numberOfMeeples) {
+      return player.selectPosition()
+        .then(firstPosition => player.selectPosition()
+          .then(secondPosition => player.swapTiles(firstPosition, secondPosition)));
     },
   },
 ];

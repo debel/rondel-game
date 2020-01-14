@@ -1,22 +1,22 @@
 {
   "files": {
-    "main.css": "/rondel-game/static/css/main.aaede7b5.chunk.css",
-    "main.js": "/rondel-game/static/js/main.877799c2.chunk.js",
-    "main.js.map": "/rondel-game/static/js/main.877799c2.chunk.js.map",
+    "main.css": "/rondel-game/static/css/main.9cd38b89.chunk.css",
+    "main.js": "/rondel-game/static/js/main.661904d8.chunk.js",
+    "main.js.map": "/rondel-game/static/js/main.661904d8.chunk.js.map",
     "runtime-main.js": "/rondel-game/static/js/runtime-main.e6a8c891.js",
     "runtime-main.js.map": "/rondel-game/static/js/runtime-main.e6a8c891.js.map",
     "static/js/2.8239c594.chunk.js": "/rondel-game/static/js/2.8239c594.chunk.js",
     "static/js/2.8239c594.chunk.js.map": "/rondel-game/static/js/2.8239c594.chunk.js.map",
     "index.html": "/rondel-game/index.html",
-    "precache-manifest.5d6618cbb9db62a8f7aa1384a13e6a63.js": "/rondel-game/precache-manifest.5d6618cbb9db62a8f7aa1384a13e6a63.js",
+    "precache-manifest.ea924aa29caa9b1947fd14797d7c0e86.js": "/rondel-game/precache-manifest.ea924aa29caa9b1947fd14797d7c0e86.js",
     "service-worker.js": "/rondel-game/service-worker.js",
-    "static/css/main.aaede7b5.chunk.css.map": "/rondel-game/static/css/main.aaede7b5.chunk.css.map",
+    "static/css/main.9cd38b89.chunk.css.map": "/rondel-game/static/css/main.9cd38b89.chunk.css.map",
     "static/js/2.8239c594.chunk.js.LICENSE": "/rondel-game/static/js/2.8239c594.chunk.js.LICENSE"
   },
   "entrypoints": [
     "static/js/runtime-main.e6a8c891.js",
     "static/js/2.8239c594.chunk.js",
-    "static/css/main.aaede7b5.chunk.css",
-    "static/js/main.877799c2.chunk.js"
+    "static/css/main.9cd38b89.chunk.css",
+    "static/js/main.661904d8.chunk.js"
   ]
 }
