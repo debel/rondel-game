@@ -1,6 +1,14 @@
 import baseTiles, { emptyTile } from './tiles';
 
-emptyTile.icon = '🍵 + 1';
+import { playerHasFoodForOrder} from './orders';
+
+export const SELECTING_OPTIONS = {
+  food: 'food',
+  tile: 'tile',
+  position: 'position',
+  order: 'order',
+  action: 'action',
+};
 
 const generateRandomSequence = (n = 8) => {
   const allValues = Array.from(new Array(n), (_, i) => i);
@@ -22,56 +30,40 @@ const randomizeBoard = () => {
   return board;
 };
 
-const playerHasFoodForOrder = (playerFoods, order) => Object.entries(order.foods)
-.map(([foodType, amount]) => playerFoods[foodType] >= amount)
-.every(hasFoodType => hasFoodType === true);
-
 const createPlayer = (name, ordersLine, tileMarket) => {
   const board = randomizeBoard();
-  const modifiers = {
-    gainFood(foodType, amount) {
-      if (foodType === 'tea') {
-        this.gainFood('tea', 1, false);
-      }
-    }
-  };
+  const modifiers = {};
   const foods = { sushi: 0, noodles: 0, tea: 0 };
+  let totalFood = 0;
   let position = 0;
   let money = 0;
   let points = 0;
-  let initiateSelectFood = () => Promise.resolve();
-  let initiateSelectOrder = () => Promise.resolve();
-  let initiateSelectTile = () => Promise.resolve();
-  let initiateTilePlacement = () => Promise.resolve();
-  let notifyOnMove = () => {};
   let isSelecting = null;
+  let setState = () => {};
+  let notifyOnMove = () => {};
+  let resolveSelect = null;
+  const initiateSelect = (type, options) => new Promise((resolve, reject) => {
+    isSelecting = type;
+    setState({ type, options });
+    resolveSelect = (value) => {
+      isSelecting = null;
+      resolveSelect = null;
+      setState(null);
+      return resolve(value);
+    };
+  });
 
   return {
-    allowSelectFood(newSetter) {
-      initiateSelectFood = newSetter;
+    onSetState(setter) {
+      setState = setter;
     },
-    allowSelectOrder(newSetter) {
-      initiateSelectOrder = newSetter;
-    },
-    allowSelectTile(newSetter) {
-      initiateSelectTile = newSetter;
-    },
-    allowPlaceTile(newSetter) {
-      initiateTilePlacement = newSetter;
-    },
-    gainMoney(amount) {
-      money += amount;
-    },
+    gainMoney(amount) { money += amount; },
     async loseMoney(amount) {
-      if (money < amount) {
-        throw new Error('Not enough money');
-      }
+      if (money < amount) { throw new Error('Not enough money'); }
 
       money -= amount;
     },
-    gainPoints(amount) {
-      points += amount;
-    },
+    gainPoints(amount) { points += amount; },
     gainFood(type, amount, callModifiers = true) {
       if (!foods[type]) {
         foods[type] = 0;
@@ -82,6 +74,7 @@ const createPlayer = (name, ordersLine, tileMarket) => {
       }
 
       foods[type] += amount;
+      totalFood += amount;
     },
     async loseFood(type, amount) {
       if (!foods[type] || foods[type] < amount) {
@@ -89,20 +82,13 @@ const createPlayer = (name, ordersLine, tileMarket) => {
       }
 
       foods[type] -= amount;
+      totalFood -= amount;
     },
-    selectFood(checkIfHas = true) {
-      if (isSelecting) {
-        throw new Error(`already selecting ${isSelecting}`);
-      }
-
-      const allFood = Object.entries(foods).reduce((result, [_, amount]) => result + amount, 0);
-      if (checkIfHas && allFood === 0) { throw new Error('Not enough food'); }
-
-      isSelecting = 'food';
-      return initiateSelectFood()
-        .finally(() => {
-          isSelecting = null;
-        });
+    hasAnyFood() {
+      return totalFood > 0;
+    },
+    selectFood() {
+      return initiateSelect(SELECTING_OPTIONS.food);
     },
     currentMoney() {
       return money;
@@ -116,7 +102,7 @@ const createPlayer = (name, ordersLine, tileMarket) => {
     currentBoard() {
       return board;
     },
-    getPosition() {
+    currentPosition() {
       return position;
     },
     onMove(cb) {
@@ -138,21 +124,14 @@ const createPlayer = (name, ordersLine, tileMarket) => {
 
       throw new Error('Illigal move');
     },
-    async selectOrder(allOrders) {
-      if (isSelecting) { throw new Error(`already selecting ${isSelecting}`)};
-
-      const hasValidOptions = ordersLine.currentOrders()
-        .map(order => playerHasFoodForOrder(foods, order))
-        .some(canFulfil => canFulfil === true);
-      
-      if (!hasValidOptions) { throw new Error('Cannot fulfil any orders right now'); }
-
-      return initiateSelectOrder();
+    async selectOrder() {
+      return initiateSelect(SELECTING_OPTIONS.order);
     },
     async fulfilOrder(selectedOrder) {
       const foodItems = Object.entries(selectedOrder.foods);
       
       if (!playerHasFoodForOrder(foods, selectedOrder)) {
+        isSelecting = null;
         throw new Error('Cannot fulfil order');
       }
 
@@ -163,28 +142,24 @@ const createPlayer = (name, ordersLine, tileMarket) => {
       ordersLine.discardOrder(selectedOrder.id);
       this.gainPoints(selectedOrder.points);
       this.gainMoney(selectedOrder.money);
+      isSelecting = null;
     },
     async selectTile() {
-      if (isSelecting) { throw new Error(`already selecting ${isSelecting}`)};
-
-      const canBuyATile = tileMarket
-        .map(tile => money >= tile.cost)
-        .some(canBuy => canBuy === true);
-
-      if (!canBuyATile) {
-        throw new Error('cannot afford any tiles');
-      }
-  
-      isSelecting = true;
-      return initiateSelectTile();
+      return initiateSelect(SELECTING_OPTIONS.tile);
     },
     async placeTile(selectedTile) {
-      return this.loseMoney(selectedTile.cost)
-        .then(initiateTilePlacement)
+      return initiateSelect(SELECTING_OPTIONS.position)
         .then((selectedPosition) => {
           board[selectedPosition] = { ...selectedTile, position: selectedPosition };  
-        }).finally(() => { isSelecting = false; });
+          setState(undefined); // force update board;
+        })
     },
+    uiSelection(type, option) {
+      return resolveSelect(option);
+    },
+    selectAction(options) {
+      return initiateSelect(SELECTING_OPTIONS.action, options);
+    }
   };
 };
 

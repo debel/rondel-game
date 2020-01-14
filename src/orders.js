@@ -31,3 +31,9 @@ const createOrdersLine = (n = 3) => {
 };
 
 export default createOrdersLine;
+
+export const defaultOrdersLine = createOrdersLine();
+
+export const playerHasFoodForOrder = (playerFoods, order) => Object.entries(order.foods)
+.map(([foodType, amount]) => playerFoods[foodType] >= amount)
+.every(hasFoodType => hasFoodType === true);

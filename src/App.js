@@ -1,6 +1,6 @@
-import React from 'react';
-import createPlayer from './player';
-import createOrdersLine from './orders';
+import React, { useEffect } from 'react';
+import createPlayer, { SELECTING_OPTIONS } from './player';
+import { defaultOrdersLine } from './orders';
 import { fancyTiles } from './tiles';
 
 import './App.css';
@@ -16,13 +16,15 @@ const Board = (props) => (
   {
     orderTilesInGrid(props.player.currentBoard()).map(row => (
       <tr>
-        {row.map(tile => <td onClick={
+        {row.map(tile => <td class="board-tile" onClick={
           () => Promise.resolve()
             .then(() => props.onPlaceTile
               ? props.onPlaceTile(tile.position)
               : props.player.move(tile.position))
             .catch(alert)
-        }>{tile.icon} {props.player.getPosition() === tile.position ? '♟️' : ''}</td>)}
+        }>{tile.icon} {props.player.currentPosition() === tile.position ? '♟️' : ''}
+          <div class="tooltip">{tile.description}</div>
+        </td>)}
       </tr>
     ))
   }
@@ -48,7 +50,7 @@ const PlayerStats = (props) => {
     }
     
     const statElement = stats[statName].type === 'food'
-      ? <div onClick={() => props.onSelectFood(statName)}>{stats[statName].symbol}</div>
+      ? <div onClick={() => props.onSelectFood && props.onSelectFood({ foodType: statName, amount: 1 })}>{stats[statName].symbol}</div>
       : <div>{stats[statName].symbol}</div>
 
     result[value].push(statElement);
@@ -66,13 +68,14 @@ const PlayerStats = (props) => {
   </table>
 };
 
-const orders = createOrdersLine();
+const orders = defaultOrdersLine;
 
 const p1 = createPlayer('p1', orders, fancyTiles);
 
 const Order = ({ id, foods, points, onSelect, money }) => (
-  <div class="order" onClick={() => onSelect({ id, foods, points, money })}>
+  <div class="order" onClick={() => onSelect && onSelect({ id, foods, points, money })}>
     {Object.entries(foods).map(([type, amount]) => <span>{amount} {stats[type].symbol}</span>)}
+    <hr/>
     <div>{points} {stats.points.symbol}  {money} {stats.money.symbol}</div>
   </div>
 );
@@ -84,8 +87,8 @@ const Orders = (props) => (
 );
 
 const MarketTile = ({ icon, cost, description,  onSelect, ...tileProps }) => (
-  <td onClick={() => onSelect({ icon, cost, ...tileProps })}>
-    {icon} <div>cost: {cost}💸</div><div class="tooltip">{description}</div>
+  <td class="market-tile" onClick={() => onSelect && onSelect({ icon, cost, ...tileProps })}>
+    {icon}<hr/><div>cost: {cost}💸</div><div class="tooltip">{description}</div>
   </td>
 );
 
@@ -95,72 +98,47 @@ const TilesMarket = ({ onSelect }) => (<table className="player-board small-font
   </tr>
 </table>);
 
+const ActionOptions = ({ options, forceRefresh }) => (
+  options && <div class="action-options">
+    {options.map(option => (
+      <div class="action-option" onClick={() => option.action().then(forceRefresh)}>{option.icon}</div>
+    ))}
+  </div>
+);
+
 function App() {
   const [turns, setTurns] = React.useState(0);
-  const [canMove, setCanMove] = React.useState(true);
-  const [actionRequired, setActionRequired] = React.useState('');
-  const [selectFood, setSelectFood] = React.useState(() => () => {});
-  const [selectOrder, setSelectOrder] = React.useState(() => () => {});
-  const [selectMarketTile, setSelectMarketTile] = React.useState(() => () => {});
-  const [selectTilePlacement, setSelectTilePlacement] = React.useState(null);
-   p1.onMove(() => setTurns(t => t + 1));
+  const [x, setX] = React.useState(0);
+  const [isSelecting, setIsSelecting] = React.useState(null);
+  const [actionOptions, setActionOptions] = React.useState(null); 
+  const selector = type => (isSelecting && isSelecting === type)
+    ? option => p1.uiSelection(type, option) 
+    : null;
 
-   p1.allowSelectFood(() => {
-    return new Promise((resolve, reject) => {
-      setCanMove(false);
-      setSelectFood(() => foodType => resolve({ foodType, amount: 1 }));
-      setActionRequired('Select food');
-    }).finally(() => {
-      setCanMove(true);
-      setSelectFood(() => () => {});
-      setActionRequired('');
-    });
-  });
+  useEffect(() => {
+    p1.onMove(() => setTurns(t => t + 1));
 
-  p1.allowSelectOrder(() => {
-    return new Promise((resolve, reject) => {
-      setCanMove(false);
-      setSelectOrder(() => order => resolve(order));
-      setActionRequired('Select order');
-    }).finally(() => {
-      setCanMove(true);
-      setSelectOrder(() => () => {});
-      setActionRequired('');
+    p1.onSetState(state => {
+      const { type = null, options = null } = state || {};
+      setIsSelecting(type);
+      setActionOptions(options);
     });
-  });
-
-  p1.allowSelectTile(() => {
-    return new Promise((resolve, reject) => {
-      setCanMove(false);
-      setSelectMarketTile(() => tile => resolve(tile));
-      setActionRequired('Select a tile from the market');
-    }).finally(() => {
-      setCanMove(true);
-      setSelectMarketTile(() => () => {});
-      setActionRequired('');
-    });
-  });
-
-  p1.allowPlaceTile(() => {
-    return new Promise((resolve, reject) => {
-      setCanMove(false);
-      setSelectTilePlacement(() => position => resolve(position));
-      setActionRequired('Place the tile on your board');
-    }).finally(() => {
-      setCanMove(true);
-      setSelectTilePlacement(null);
-      setActionRequired('');
-    });
-  });
+  }, []);
 
   return (
     <div class="wrapper">
-      <div>Turn: {turns} {actionRequired}</div>
-      <Board player={p1} refresh={() => { setTurns(s => s+1); }} onPlaceTile={selectTilePlacement} />
+      <div>Turn: {turns} {isSelecting ? `Select ${isSelecting}` : ''}</div>
+      <ActionOptions options={actionOptions} forceRefresh={() => setX(x => x+1)} />
+      <div class="float-left">
+        <Board player={p1} onPlaceTile={selector(SELECTING_OPTIONS.position)} />
+        <PlayerStats player={p1} onSelectFood={selector(SELECTING_OPTIONS.food)} />
+      </div>
       <div class="float-right">
-        <Orders orders={orders.currentOrders()} onSelectOrder={selectOrder} />
-        <PlayerStats player={p1} onSelectFood={selectFood} />
-        <TilesMarket onSelect={selectMarketTile} />
+        <Orders 
+          orders={orders.currentOrders()}
+          onSelectOrder={selector(SELECTING_OPTIONS.order)}
+        />
+        <TilesMarket onSelect={selector(SELECTING_OPTIONS.tile)} />
       </div>
     </div>
   );
