@@ -1,4 +1,4 @@
-import baseTiles, { emptyTile } from './tiles';
+import { randomizeBoard, emptyTile } from './tiles';
 
 import { playerHasFoodForOrder} from './orders';
 
@@ -8,26 +8,6 @@ export const SELECTING_OPTIONS = {
   position: 'position',
   order: 'order',
   action: 'action',
-};
-
-const generateRandomSequence = (n = 8) => {
-  const allValues = Array.from(new Array(n), (_, i) => i);
-  const result = [];
-
-  for (let i = 0; i < n; i += 1) {
-    const selectedIndex = Math.floor(Math.random() * allValues.length);
-    const selected = allValues.splice(selectedIndex, 1)[0];
-    result.push(selected);
-  }
-
-  return result;
-};
-
-const randomizeBoard = () => {
-  const sequence = generateRandomSequence(baseTiles.length);
-  const board = sequence.map((i, j) => ({ ...baseTiles[i], position: j }));
-  board.x = emptyTile;
-  return board;
 };
 
 const createPlayer = (name, ordersLine, tileMarket) => {
@@ -166,6 +146,9 @@ const createPlayer = (name, ordersLine, tileMarket) => {
     async placeTile(selectedTile) {
       return initiateSelect(SELECTING_OPTIONS.position)
         .then((selectedPosition) => {
+          if (selectedPosition === 'x') {
+            throw new Error('illegal position');
+          }
           board[selectedPosition] = { ...selectedTile, position: selectedPosition };  
           setState(undefined); // force update board;
         })

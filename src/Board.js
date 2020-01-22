@@ -11,13 +11,13 @@ const Board = (props) => (
   {
     orderTilesInGrid(props.player.currentBoard()).map(row => (
       <tr>
-        {row.map(tile => <td class="board-tile" onClick={
+        {row.map(tile => <td class={`board-tile ${tile.background}`} onClick={
           () => Promise.resolve()
             .then(() => props.onPlaceTile
               ? props.onPlaceTile(tile.position)
               : props.player.move(tile.position))
             .catch(alert)
-        }>{tile.icon} {props.player.currentPosition() === tile.position ? '♟️' : ''}
+        }><div class="iconography">{tile.icon}</div> {props.player.currentPosition() === tile.position ? '♟️' : ''}
           <div class="tooltip">{tile.description}</div>
         </td>)}
       </tr>

@@ -75,3 +75,27 @@ td:hover .tooltip{
   font-size: 1.2em;
   display: inline-block;
 }
+
+.board-tile {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.board-tile>.iconography {
+  font-size: 0.5em;
+  backdrop-filter: blur(1px);
+  text-align: center;
+}
+
+.kitchen {
+  background-image: url('images/kitchen-3d.png');  
+}
+
+.dining {
+  background-image: url('images/dining-3d.png');  
+}
+
+.office {
+  background-image: url('images/office-3d.png');  
+}

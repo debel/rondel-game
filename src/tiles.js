@@ -1,5 +1,18 @@
 import { defaultOrdersLine, playerHasFoodForOrder } from './orders';
 
+const generateRandomSequence = (n = 8) => {
+  const allValues = Array.from(new Array(n), (_, i) => i);
+  const result = [];
+
+  for (let i = 0; i < n; i += 1) {
+    const selectedIndex = Math.floor(Math.random() * allValues.length);
+    const selected = allValues.splice(selectedIndex, 1)[0];
+    result.push(selected);
+  }
+
+  return result;
+};
+
 const gainFood = foodType => (player, numberOfMeeples = 1) => {
   return Promise.resolve(player.gainFood(foodType, numberOfMeeples));
 };
@@ -156,6 +169,7 @@ const baseTiles = [
     description: 'Cook some sushi',
     type: 0,
     cost: 0,
+    background: 'kitchen',
     activate: gainFood('sushi'),
   },
   {
@@ -164,6 +178,7 @@ const baseTiles = [
     description: 'Cook some noodles',
     type: 0,
     cost: 0,
+    background: 'kitchen',
     activate: gainFood('noodles'),
   },
   {
@@ -172,6 +187,7 @@ const baseTiles = [
     description: 'Produce some tea',
     type: 0,
     cost: 0,
+    background: 'kitchen',
     activate: gainFood('tea'),
   },
   {
@@ -199,6 +215,7 @@ const baseTiles = [
     description: 'Hire a worker (new meeple)',
     type: 0,
     cost: 0,
+    background: 'office',
     async activate(player, numberOfMeeples) {
       alert('hire');
       return true;
@@ -210,6 +227,7 @@ const baseTiles = [
     description: 'Improve your restaurant (buy tiles)',
     type: 0,
     cost: 0,
+    background: 'office',
     async activate(player, numberOfMeeples) {
       const canBuyATile = fancyTiles
         .map(tile => player.currentMoney() >= tile.cost)
@@ -236,6 +254,7 @@ const baseTiles = [
     description: 'Fulfil an order',
     type: 0,
     cost: 0,
+    background: 'dining',
     async activate(player, numberOfMeeples = 1) {
       const hasValidOptions = defaultOrdersLine.currentOrders()
       .map(order => playerHasFoodForOrder(player.currentFood(), order))
@@ -266,3 +285,10 @@ const baseTiles = [
 ];
 
 export default baseTiles;
+
+export const randomizeBoard = () => {
+  const sequence = generateRandomSequence(baseTiles.length);
+  const board = sequence.map((i, j) => ({ ...baseTiles[i], position: j }));
+  board.x = emptyTile;
+  return board;
+};
